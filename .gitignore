@@ -1,6 +1,14 @@
-﻿.venv/
+﻿@"
+venv/
 __pycache__/
 *.pyc
-.env
+*.pyo
+*.pyd
+.Python
+env/
+.venv/
 .vscode/
+.idea/
+*.log
 .DS_Store
+"@ > .gitignore
