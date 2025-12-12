@@ -1,0 +1,93 @@
+﻿
+======================================================================
+SUMMONMIND POC - COMPREHENSIVE BENCHMARK TESTING
+======================================================================
+python : Traceback 
+(most recent call 
+last):
+At line:1 char:1
++ python 
+test_benchmark.py > 
+test_results.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (Traceba   
+ ck (most recent     
+call last)::Stri    
+ng) [], RemoteEx    
+ception
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+  File "C:\Users\wani
+v\OneDrive\Desktop\su
+mmonmind-poc\test_ben
+chmark.py", line 
+201, in <module>
+    print(f"\n\u2713 
+Server is running: 
+{health.json()}")
+  File "C:\Users\wani
+v\AppData\Local\Progr
+ams\Python\Python311\
+Lib\encodings\cp1252.
+py", line 19, in 
+encode
+    return codecs.cha
+rmap_encode(input,sel
+f.errors,encoding_tab
+le)[0]
+           ^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^
+UnicodeEncodeError: 
+'charmap' codec 
+can't encode 
+character '\u2713' 
+in position 2: 
+character maps to 
+<undefined>
+
+During handling of 
+the above exception, 
+another exception 
+occurred:
+
+Traceback (most 
+recent call last):
+  File "C:\Users\wani
+v\OneDrive\Desktop\su
+mmonmind-poc\test_ben
+chmark.py", line 
+203, in <module>
+    print("\n\u2717 
+Server is not 
+running! Start with: 
+uvicorn main:app 
+--reload")
+  File "C:\Users\wani
+v\AppData\Local\Progr
+ams\Python\Python311\
+Lib\encodings\cp1252.
+py", line 19, in 
+encode
+    return codecs.cha
+rmap_encode(input,sel
+f.errors,encoding_tab
+le)[0]
+           ^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^
+UnicodeEncodeError: 
+'charmap' codec 
+can't encode 
+character '\u2717' 
+in position 2: 
+character maps to 
+<undefined>

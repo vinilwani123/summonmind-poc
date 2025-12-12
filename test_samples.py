@@ -1,7 +1,7 @@
 ﻿import json, requests, os, sys, textwrap
 
 FILES = ["samples/valid.json", "samples/invalid.json"]
-URL = "http://127.0.0.1:8000/validate"
+URL = "http://127.0.0.1:8001/validate"
 
 def post_file(path):
     print("="*60)

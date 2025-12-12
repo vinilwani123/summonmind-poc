@@ -17,7 +17,7 @@ except Exception as e:
         print(s[:300])
 # attempt request (ensure server is running separately)
 try:
-    r = requests.post("http://127.0.0.1:8000/validate", json=data, timeout=10)
+    r = requests.post("http://127.0.0.1:8001/validate", json=data, timeout=10)
     print("status:", r.status_code)
     print("body:", r.text)
 except Exception as e:

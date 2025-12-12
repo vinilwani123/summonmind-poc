@@ -1,4 +1,4 @@
-# SummonMind POC - Schema Validation & Rule Engine
+﻿# SummonMind POC - Schema Validation & Rule Engine
 
 A minimal backend service that validates data against schemas and executes declarative rules with computed field support.
 
@@ -50,11 +50,11 @@ Start the FastAPI server using uvicorn:
 uvicorn main:app --reload
 ```
 
-The server will start at `http://127.0.0.1:8000`
+The server will start at `http://127.0.0.1:8001`
 
 To verify the server is running:
 ```bash
-curl http://127.0.0.1:8000/
+curl http://127.0.0.1:8001/
 ```
 
 Expected response: `{"msg":"SummonMind POC running"}`
@@ -120,7 +120,7 @@ Validates data against a schema and executes rules.
 ### Test Valid Data
 
 ```bash
-curl -X POST http://127.0.0.1:8000/validate \
+curl -X POST http://127.0.0.1:8001/validate \
   -H "Content-Type: application/json" \
   -d @samples/valid.json
 ```
@@ -130,7 +130,7 @@ Expected: Returns `validatedData` with computed fields
 ### Test Invalid Data
 
 ```bash
-curl -X POST http://127.0.0.1:8000/validate \
+curl -X POST http://127.0.0.1:8001/validate \
   -H "Content-Type: application/json" \
   -d @samples/invalid.json
 ```
@@ -140,7 +140,7 @@ Expected: Returns `errors` array with validation failures
 ### Manual Test Example
 
 ```bash
-curl -X POST http://127.0.0.1:8000/validate \
+curl -X POST http://127.0.0.1:8001/validate \
   -H "Content-Type: application/json" \
   -d '{
     "schema": {
@@ -191,14 +191,14 @@ This will test:
 
 ```
 summonmind-poc/
-├── main.py              # FastAPI application with validation logic
-├── requirements.txt     # Python dependencies
-├── README.md            # This file
-├── ARCHITECTURE.md      # Architecture documentation
-├── test_samples.py      # Automated test script
-├── samples/
-│   ├── valid.json       # Valid test case
-│   └── invalid.json     # Invalid test case
+â”œâ”€â”€ main.py              # FastAPI application with validation logic
+â”œâ”€â”€ requirements.txt     # Python dependencies
+â”œâ”€â”€ README.md            # This file
+â”œâ”€â”€ ARCHITECTURE.md      # Architecture documentation
+â”œâ”€â”€ test_samples.py      # Automated test script
+â”œâ”€â”€ samples/
+â”‚   â”œâ”€â”€ valid.json       # Valid test case
+â”‚   â””â”€â”€ invalid.json     # Invalid test case
 ```
 
 ## Error Handling
@@ -213,8 +213,8 @@ The service handles several error cases:
 ## API Documentation
 
 Once the server is running, visit:
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- ReDoc: `http://127.0.0.1:8000/redoc`
+- Swagger UI: `http://127.0.0.1:8001/docs`
+- ReDoc: `http://127.0.0.1:8001/redoc`
 
 ## License
 

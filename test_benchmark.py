@@ -1,9 +1,9 @@
-"""Simple comprehensive test for POC verification"""
+﻿"""Simple comprehensive test for POC verification"""
 import requests
 import json
 import sys
 
-URL = "http://127.0.0.1:8000/validate"
+URL = "http://127.0.0.1:8001/validate"
 
 print("\n" + "="*80)
 print(" SUMMONMIND POC - COMPREHENSIVE BENCHMARK TEST ".center(80, "="))
@@ -11,10 +11,10 @@ print("="*80 + "\n")
 
 # Check server
 try:
-    r = requests.get("http://127.0.0.1:8000", timeout=3)
-    print(f"✓ Server Status: {r.json()['msg']}\n")
+    r = requests.get("http://127.0.0.1:8001", timeout=3)
+    print(f"âœ“ Server Status: {r.json()['msg']}\n")
 except:
-    print("✗ ERROR: Server not running!\n")
+    print("âœ— ERROR: Server not running!\n")
     sys.exit(1)
 
 passed = 0
@@ -31,21 +31,21 @@ def run_test(num, name, payload, should_have_errors=False):
         
         if should_have_errors:
             if "errors" in result or "error" in result:
-                print(f"✓ PASS: Correctly returned errors")
+                print(f"âœ“ PASS: Correctly returned errors")
                 print(f"  Response: {json.dumps(result, indent=2)[:200]}...")
                 passed += 1
             else:
-                print(f"✗ FAIL: Should have returned errors")
+                print(f"âœ— FAIL: Should have returned errors")
         else:
             if "validatedData" in result:
-                print(f"✓ PASS: Validation successful")
+                print(f"âœ“ PASS: Validation successful")
                 print(f"  Validated Data: {json.dumps(result['validatedData'], indent=2)[:200]}...")
                 passed += 1
             else:
-                print(f"✗ FAIL: Should have succeeded")
+                print(f"âœ— FAIL: Should have succeeded")
                 print(f"  Response: {json.dumps(result, indent=2)[:200]}...")
     except Exception as e:
-        print(f"✗ FAIL: {str(e)}")
+        print(f"âœ— FAIL: {str(e)}")
 
 # Test 1: Basic schema validation
 run_test(1, "Schema Validation - All Types (string, number, boolean)", {
@@ -120,15 +120,15 @@ print(f"Failed: {total - passed}")
 print(f"Success Rate: {(passed/total)*100:.1f}%\n")
 
 if passed == total:
-    print("🎉 ALL BENCHMARK TESTS PASSED!")
-    print("✓ Schema validation working")
-    print("✓ Type checking working") 
-    print("✓ Computed fields working")
-    print("✓ Rule execution working")
-    print("✓ Error handling working")
-    print("✓ Safe evaluation working")
-    print("\n✅ POC IS READY FOR SUBMISSION TO HR!\n")
+    print("ðŸŽ‰ ALL BENCHMARK TESTS PASSED!")
+    print("âœ“ Schema validation working")
+    print("âœ“ Type checking working") 
+    print("âœ“ Computed fields working")
+    print("âœ“ Rule execution working")
+    print("âœ“ Error handling working")
+    print("âœ“ Safe evaluation working")
+    print("\nâœ… POC IS READY FOR SUBMISSION TO HR!\n")
 else:
-    print(f"⚠️  {total - passed} test(s) failed\n")
+    print(f"âš ï¸  {total - passed} test(s) failed\n")
 
 print("="*80 + "\n")

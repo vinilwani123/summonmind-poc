@@ -1,4 +1,4 @@
-# Architecture Documentation
+﻿# Architecture Documentation
 
 ## Overview
 
@@ -62,7 +62,7 @@ Computed fields use mustache-style templates: `{{fieldName}}`
 computed: { "fullName": "{{firstName}} {{lastName}}" }
 data: { "firstName": "Alice", "lastName": "Wonder" }
 
-→ Resolves to: "Alice Wonder"
+â†’ Resolves to: "Alice Wonder"
 ```
 
 For nested templates:
@@ -72,8 +72,8 @@ computed: {
   "fullName": "{{firstName}} {{lastName}}"
 }
 
-→ Iteration 1: fullName = "Alice Wonder"
-→ Iteration 2: greeting = "Hello Alice Wonder"
+â†’ Iteration 1: fullName = "Alice Wonder"
+â†’ Iteration 2: greeting = "Hello Alice Wonder"
 ```
 
 ## Recursion Prevention
@@ -86,7 +86,7 @@ computed: {
 
 ### Protection Against
 - Circular references: `a = "{{b}}"`, `b = "{{a}}"`
-- Deep nesting chains: `a → b → c → d → e → f`
+- Deep nesting chains: `a â†’ b â†’ c â†’ d â†’ e â†’ f`
 - Malicious payloads designed to cause resource exhaustion
 
 ### Design Choice
@@ -99,7 +99,7 @@ Depth limit of 5 balances:
 
 ### Deterministic Behavior
 The service guarantees:
-1. **Same Input → Same Output**: Identical requests always produce identical responses
+1. **Same Input â†’ Same Output**: Identical requests always produce identical responses
 2. **Stable Field Ordering**: Computed fields are processed in sorted key order
 3. **No Hidden State**: No database, cache, or external dependencies
 4. **Reproducible Evaluation**: Safe eval restricts non-deterministic operations
