@@ -1,0 +1,36 @@
+﻿{
+  "schema": {
+    "version": 1,
+    "fields": {
+      "firstName": "string",
+      "lastName": "string",
+      "age": "number",
+      "isSubscribed": "boolean"
+    },
+    "computed": {
+      "fullName": "{{firstName}} {{lastName}}"
+    }
+  },
+  "rules": [
+    {
+      "id": "r1",
+      "level": "field",
+      "field": "age",
+      "condition": "value >= 18",
+      "action": "validate"
+    },
+    {
+      "id": "r2",
+      "level": "field",
+      "field": "firstName",
+      "condition": "value != ''",
+      "action": "validate"
+    }
+  ],
+  "data": {
+    "firstName": "Alice",
+    "lastName": "Wonder",
+    "age": 25,
+    "isSubscribed": true
+  }
+}

@@ -1,0 +1,29 @@
+﻿{
+  "schema": {
+    "version": 1,
+    "fields": {
+      "firstName": "string",
+      "lastName": "string",
+      "age": "number",
+      "isSubscribed": "boolean"
+    },
+    "computed": {
+      "fullName": "{{firstName}} {{lastName}}"
+    }
+  },
+  "rules": [
+    {
+      "id": "r1",
+      "level": "field",
+      "field": "age",
+      "condition": "value >= 18",
+      "action": "validate"
+    }
+  ],
+  "data": {
+    "firstName": "Bob",
+    "lastName": "Builder",
+    "age": 16,
+    "isSubscribed": false
+  }
+}
