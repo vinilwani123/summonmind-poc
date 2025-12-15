@@ -4,13 +4,15 @@ import ast
 import operator as op
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from jinja2 import Environment, StrictUndefined, TemplateError
 
-# --------------------------
-# Safe AST evaluator
-# --------------------------
-_allowed_ops = {
+# =========================================================
+# Safe AST Evaluator (for rule conditions)
+# =========================================================
+
+_ALLOWED_OPS = {
     ast.Add: op.add,
     ast.Sub: op.sub,
     ast.Mult: op.mul,
@@ -25,121 +27,93 @@ _allowed_ops = {
     ast.LtE: op.le,
     ast.Gt: op.gt,
     ast.GtE: op.ge,
-    # boolean ops handled separately for short-circuit semantics
 }
 
-def _eval_node(node: ast.AST, names: Dict[str, Any]):
-    # literals
+def _eval_node(node: ast.AST, env: Dict[str, Any]):
     if isinstance(node, ast.Constant):
         return node.value
-    # py<3.8 compatibility nodes
-    if isinstance(node, ast.Num):
-        return node.n
-    if isinstance(node, ast.Str):
-        return node.s
+
     if isinstance(node, ast.Name):
-        if node.id in names:
-            return names[node.id]
-        raise ValueError(f"Unknown name: {node.id}")
+        if node.id in env:
+            return env[node.id]
+        raise ValueError(f"Unknown variable: {node.id}")
+
     if isinstance(node, ast.BinOp):
-        left = _eval_node(node.left, names)
-        right = _eval_node(node.right, names)
+        left = _eval_node(node.left, env)
+        right = _eval_node(node.right, env)
         op_type = type(node.op)
-        if op_type in _allowed_ops:
-            return _allowed_ops[op_type](left, right)
-        raise ValueError(f"Unsupported binary operator: {op_type}")
+        if op_type in _ALLOWED_OPS:
+            return _ALLOWED_OPS[op_type](left, right)
+        raise ValueError("Unsupported binary operator")
+
     if isinstance(node, ast.UnaryOp):
-        operand = _eval_node(node.operand, names)
+        operand = _eval_node(node.operand, env)
         op_type = type(node.op)
-        if op_type in _allowed_ops:
-            return _allowed_ops[op_type](operand)
-        raise ValueError(f"Unsupported unary operator: {op_type}")
+        if op_type in _ALLOWED_OPS:
+            return _ALLOWED_OPS[op_type](operand)
+        raise ValueError("Unsupported unary operator")
+
     if isinstance(node, ast.BoolOp):
-        # Evaluate boolean operators with Python semantics
         if isinstance(node.op, ast.And):
-            for v in node.values:
-                if not _eval_node(v, names):
-                    return False
-            return True
+            return all(_eval_node(v, env) for v in node.values)
         if isinstance(node.op, ast.Or):
-            for v in node.values:
-                if _eval_node(v, names):
-                    return True
-            return False
+            return any(_eval_node(v, env) for v in node.values)
         raise ValueError("Unsupported boolean operator")
+
     if isinstance(node, ast.Compare):
-        left = _eval_node(node.left, names)
+        left = _eval_node(node.left, env)
         for op_node, comparator in zip(node.ops, node.comparators):
-            right = _eval_node(comparator, names)
+            right = _eval_node(comparator, env)
             op_type = type(op_node)
-            if op_type not in _allowed_ops:
-                raise ValueError(f"Unsupported compare op: {op_type}")
-            if not _allowed_ops[op_type](left, right):
+            if op_type not in _ALLOWED_OPS:
+                raise ValueError("Unsupported comparison operator")
+            if not _ALLOWED_OPS[op_type](left, right):
                 return False
             left = right
         return True
-    if isinstance(node, ast.Subscript):
-        val = _eval_node(node.value, names)
-        # handle various slice node shapes across Python versions
-        sl = node.slice
-        if isinstance(sl, ast.Constant):
-            key = sl.value
-        elif hasattr(sl, "value"):
-            key = _eval_node(sl.value, names)
-        else:
-            key = _eval_node(sl, names)
-        return val[key]
-    if isinstance(node, ast.List):
-        return [_eval_node(e, names) for e in node.elts]
-    # disallow attribute access and calls
-    if isinstance(node, ast.Attribute):
-        raise ValueError("Attribute access not allowed")
-    if isinstance(node, ast.Call):
-        raise ValueError("Function calls not allowed")
-    raise ValueError(f"Unsupported AST node: {type(node).__name__}")
 
-def safe_eval(expr: str, env: Dict[str, Any]):
-    """
-    Safely evaluate a limited expression using AST.
-    Allowed: literals, names from env, arithmetic, comparisons, boolean ops, subscripts.
-    Disallowed: attribute access, calls, imports, etc.
-    """
+    raise ValueError(f"Unsupported expression element: {type(node).__name__}")
+
+def safe_eval(expr: str, env: Dict[str, Any]) -> bool:
     try:
-        node = ast.parse(expr, mode="eval")
-    except SyntaxError as e:
-        raise ValueError(f"Invalid expression syntax: {e}")
-    return _eval_node(node.body, env)
+        tree = ast.parse(expr, mode="eval")
+    except SyntaxError:
+        raise ValueError("Invalid expression syntax")
+    return _eval_node(tree.body, env)
 
-# --------------------------
-# Computed field resolver (Jinja2) with depth guard
-# --------------------------
+# =========================================================
+# Computed Fields (Jinja2) with Depth Guard
+# =========================================================
+
 jinja_env = Environment(undefined=StrictUndefined)
 MAX_COMPUTE_DEPTH = 5
 
-def resolve_computed_field(template_str: str, data: dict, depth: int = 0) -> str:
+def resolve_computed(template: str, data: Dict[str, Any], depth: int = 0) -> str:
     if depth > MAX_COMPUTE_DEPTH:
         raise RecursionError("Max evaluation depth reached")
+
     try:
-        tmpl = jinja_env.from_string(template_str)
-        rendered = tmpl.render(**data)
+        rendered = jinja_env.from_string(template).render(**data)
     except TemplateError as e:
-        raise ValueError(f"Template rendering error: {e}")
-    # if nested templates remain, resolve again (counts as another depth level)
+        raise ValueError(f"Template error: {e}")
+
     if "{{" in rendered and "}}" in rendered:
-        return resolve_computed_field(rendered, data, depth + 1)
+        return resolve_computed(rendered, data, depth + 1)
+
     return rendered
 
-# --------------------------
-# FastAPI app and models
-# --------------------------
-app = FastAPI(title="SummonMind POC")
+# =========================================================
+# FastAPI App
+# =========================================================
+
+app = FastAPI(title="SummonMind Backend POC")
 
 class Rule(BaseModel):
     id: str
-    level: str  # 'field' supported in this POC
-    field: Optional[str] = None
+    level: str
+    field: Optional[str]
     condition: str
-    action: str  # 'validate' supported
+    action: str
 
 @app.get("/")
 async def health():
@@ -147,38 +121,41 @@ async def health():
 
 @app.post("/validate")
 async def validate_endpoint(request: Request):
-    payload = await request.json()
-    # Basic request shape checks
+    # ---------- Parse JSON safely ----------
+    try:
+        payload = await request.json()
+    except Exception:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Invalid or empty JSON body"}
+        )
+
     schema = payload.get("schema")
     rules = payload.get("rules", [])
     data = payload.get("data", {})
 
     if not schema or "version" not in schema or "fields" not in schema:
-        raise HTTPException(status_code=400, detail={"error": "Invalid schema: 'version' and 'fields' required"})
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "Invalid schema: version and fields required"}
+        )
 
-    # Prepare working copy of data to update with computed fields
-    working = dict(data or {})
+    # ---------- Working copy ----------
+    working = dict(data)
 
-    # 1) Resolve computed fields (if any)
-    computed_map = schema.get("computed", {}) or {}
+    # ---------- Resolve computed fields ----------
     try:
-        for comp_name, template in computed_map.items():
-            resolved = resolve_computed_field(template, working)
-            # store resolved value (as string); later we will validate type per schema.fields
-            working[comp_name] = resolved
+        for name, template in (schema.get("computed") or {}).items():
+            working[name] = resolve_computed(template, working)
     except RecursionError:
-        # depth guard triggered
         return {"error": "Max evaluation depth reached"}
     except Exception as e:
-        # template rendering error
-        return {"errors": [{"message": f"Computed field error: {e}"}]}
+        return {"errors": [{"message": str(e)}]}
 
-    # 2) Validate types declared in schema.fields
-    # schema.fields might be either {"name": "string"} or {"name": {"type":"string"}}
-    fields_spec = schema.get("fields", {}) or {}
+    # ---------- Type validation ----------
     errors: List[Dict[str, Any]] = []
 
-    def type_matches(val: Any, expected: str) -> bool:
+    def matches_type(val, expected):
         if expected == "string":
             return isinstance(val, str)
         if expected == "number":
@@ -187,83 +164,46 @@ async def validate_endpoint(request: Request):
             return isinstance(val, bool)
         return False
 
-    # if fields are declared as "fieldName": "string|number|boolean"
-    # normalize spec: support both forms
-    normalized_spec: Dict[str, str] = {}
-    for fname, spec in fields_spec.items():
-        if isinstance(spec, str):
-            normalized_spec[fname] = spec
-        elif isinstance(spec, dict) and "type" in spec:
-            normalized_spec[fname] = spec["type"]
-        else:
-            normalized_spec[fname] = "string"  # default fallback
+    for field, expected in schema["fields"].items():
+        if field in working and not matches_type(working[field], expected):
+            errors.append({
+                "field": field,
+                "message": f"Expected {expected}, got {type(working[field]).__name__}"
+            })
 
-    # Validate computed fields against types, and original data fields
-    for fname, expected in normalized_spec.items():
-        if fname in working:
-            val = working[fname]
-            # if val is a string but expected is number/boolean, attempt safe coercion for numbers/booleans
-            if expected == "number" and isinstance(val, str):
-                try:
-                    if "." in val:
-                        val_coerced = float(val)
-                    else:
-                        val_coerced = int(val)
-                    working[fname] = val_coerced
-                    val = val_coerced
-                except Exception:
-                    pass
-            if expected == "boolean" and isinstance(val, str):
-                lower = val.strip().lower()
-                if lower in ("true", "false"):
-                    working[fname] = lower == "true"
-                    val = working[fname]
-            if not type_matches(val, expected):
-                errors.append({
-                    "field": fname,
-                    "message": f"Field '{fname}' expected type '{expected}' but got '{type(val).__name__}'"
-                })
-        else:
-            # If field missing, it's okay — depends on strictness; here we treat missing as not an error
-            pass
-
-    # If type errors occurred, return them before running rules
     if errors:
         return {"errors": errors}
 
-    # 3) Execute rules
-    rule_errors: List[Dict[str, Any]] = []
-    # Rules may be given as plain dicts; parse with Rule model for validation convenience
-    parsed_rules: List[Rule] = []
-    for r in rules:
-        try:
-            parsed_rules.append(Rule.parse_obj(r))
-        except Exception as e:
-            # skip invalid rule definitions
-            rule_errors.append({"rule": r.get("id", "<missing>"), "message": f"Invalid rule definition: {e}"})
+    # ---------- Execute rules ----------
+    rule_errors = []
 
-    # Execute in provided order (deterministic)
-    for r in parsed_rules:
-        if r.level != "field":
-            # only field-level supported in this POC
+    for r in rules:
+        rule = Rule(**r)
+
+        if rule.level != "field":
             continue
-        fld = r.field
-        cond = r.condition
-        # supply evaluation environment: value (field value) and data (all fields)
-        val = working.get(fld)
-        env = {"value": val, "data": working}
+
+        value = working.get(rule.field)
+        env = {"value": value}
+
         try:
-            res = safe_eval(cond, env)
+            passed = safe_eval(rule.condition, env)
         except Exception as e:
-            # Evaluation error -> treat as rule failure with message
-            rule_errors.append({"rule": r.id, "field": fld, "message": f"Rule {r.id} evaluation error: {e}"})
+            rule_errors.append({
+                "rule": rule.id,
+                "field": rule.field,
+                "message": str(e)
+            })
             continue
-        # If action is 'validate' and condition is False -> validation failure
-        if r.action == "validate" and not bool(res):
-            rule_errors.append({"rule": r.id, "field": fld, "message": f"Rule {r.id} failed: {cond}"})
+
+        if rule.action == "validate" and not passed:
+            rule_errors.append({
+                "rule": rule.id,
+                "field": rule.field,
+                "message": f"Rule {rule.id} failed: {rule.condition}"
+            })
 
     if rule_errors:
         return {"errors": rule_errors}
 
-    # All good, return validatedData
     return {"validatedData": working}
